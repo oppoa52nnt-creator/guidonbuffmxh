@@ -253,7 +253,7 @@
         <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:8px;">Chọn phân loại dịch vụ:</label>
         <div class="category-container">
             <div class="category-btn active" id="btn-follow" onclick="selectCategory('Follow')">Tăng theo dõi</div>
-            <div class="category-btn" id="btn-like" onclick="selectCategory('Like')">Tăng Tim/Like</div>
+            <div class="category-btn" id="btn-like" onclick="selectCategory('Like')">Tăng Tim/Cảm Xúc</div>
             <div class="category-btn" id="btn-view" onclick="selectCategory('View')">Tăng View</div>
         </div>
 
@@ -293,6 +293,9 @@
                 <label>Tải ảnh hóa đơn (Bill) lên hệ thống:</label>
                 <input type="file" id="fileBill" accept="image/*" class="form-control" onchange="processFile(this)">
                 <p class="file-note">Nhấn nút bên trên để tải hình ảnh hóa đơn vừa chuyển khoản thành công.</p>
+                <div style="text-align: center; margin-top: 10px;">
+                    <img id="previewBill" src="" alt="Xem trước hóa đơn" style="max-width: 100%; max-height: 250px; border-radius: 6px; display: none; border: 1px solid var(--border-color);" />
+                </div>
             </div>
         </div>
 
@@ -301,22 +304,73 @@
 
     <script>
         // --- ĐƯỜNG DẪN CẤU HÌNH GOOGLE SHEETS CỦA BẠN ---
-        const SCRIPT_URL = "VUI_LÒNG_DÁN_URL_APP_SCRIPT_CỦA_BẠN_VÀO_ĐÂY";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVlAyh35pYyarZWUS1zihC4-nD18vhgQ-iW24RTcWm_c7A7E9jDWDYelkgxJnk0BE/exec";
 
-        // Định nghĩa bảng giá dịch vụ đồng giá mẫu cho cả 5 nền tảng (Giá tính trên mỗi 1 đơn vị lẻ)
+        // BẢNG GIÁ ĐA TẦNG: Đã phân tách chi tiết theo từng Nền tảng -> từng Danh mục (Giá tính theo mốc 1000 đơn vị)
         const pricingData = {
-            Follow: [
-                { name: "Server Theo Dõi 1 (Tốc độ ổn định) - 15đ / 1 follow", price: 0.015 },
-                { name: "Server Theo Dõi 2 (Giá siêu rẻ) - 10đ / 1 follow", price: 0.010 }
-            ],
-            Like: [
-                { name: "Server Tăng Tim 1 (Tương tác thật) - 12đ / 1 tim", price: 0.012 },
-                { name: "Server Tăng Tim 2 (Tốc độ cao) - 8đ / 1 tim", price: 0.008 }
-            ],
-            View: [
-                { name: "Server Tăng View 1 (Xem nhanh) - 2đ / 1 view", price: 0.002 },
-                { name: "Server Tăng View 2 (Xem chậm an toàn) - 1đ / 1 view", price: 0.001 }
-            ]
+            Facebook: {
+                Follow: [
+                    { name: "Theo Dõi Ẩn - 10.000đ", price: 15000 },
+                    { name: "theo Dõi Ẩn Lên Nhanh - 15.000đ", price: 15000 }
+                ],
+                Like: [
+                    { name: "Tim bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "Like bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "Haha bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "Tức Giận bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "Wow bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "Sad🥲 bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "care🥰 bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                ],
+                View: [
+                    { name: "FB View Video / Reel - 3.000đ / 1000 view", price: 3000 }
+                ]
+            },
+            TikTok: {
+                Follow: [
+                    { name: "TT Follow Việt (Bảo hành 30 ngày) - 25.000đ / 1000 follow", price: 25000 },
+                    { name: "TT Follow Quốc Tế (Giá rẻ) - 15.000đ / 1000 follow", price: 15000 }
+                ],
+                Like: [
+                    { name: "TT Like/Tim Video (Nhanh) - 14.000đ / 1000 tim", price: 14000 }
+                ],
+                View: [
+                    { name: "TT View Video (Siêu tốc) - 1.000đ / 1000 view", price: 1000 }
+                ]
+            },
+            Instagram: {
+                Follow: [
+                    { name: "IG Follow Ngoại (Chất lượng) - 20.000đ / 1000 follow", price: 20000 }
+                ],
+                Like: [
+                    { name: "IG Like Hình Ảnh - 10.000đ / 1000 like", price: 10000 }
+                ],
+                View: [
+                    { name: "IG View Reels - 2.000đ / 1000 view", price: 2000 }
+                ]
+            },
+            Telegram: {
+                Follow: [
+                    { name: "TL Member Channel / Group - 30.000đ / 1000 mem", price: 30000 }
+                ],
+                Like: [
+                    { name: "TL Reaction Bài Viết - 5.000đ / 1000 slot", price: 5000 }
+                ],
+                View: [
+                    { name: "TL View Post (Bản tin) - 1.500đ / 1000 view", price: 1500 }
+                ]
+            },
+            Threads: {
+                Follow: [
+                    { name: "TH Followers (Acc sạch) - 35.000đ / 1000 follow", price: 35000 }
+                ],
+                Like: [
+                    { name: "TH Likes Bài Đăng - 15.000đ / 1000 like", price: 15000 }
+                ],
+                View: [
+                    { name: "TH View Khởi Tạo - 4.000đ / 1000 view", price: 4000 }
+                ]
+            }
         };
 
         let currentPlatformName = "";
@@ -358,16 +412,26 @@
             if(category === 'Like') document.getElementById('btn-like').classList.add('active');
             if(category === 'View') document.getElementById('btn-view').classList.add('active');
 
-            // Render danh sách gói dịch vụ chi tiết tương ứng
+            // Render danh sách gói dịch vụ chi tiết tương ứng theo Nền tảng và Phân loại
             const selectEl = document.getElementById('serviceSelect');
             selectEl.innerHTML = "";
             
-            pricingData[category].forEach((item, index) => {
+            // Lấy danh sách gói cụ thể dựa trên nền tảng hiện tại và danh mục
+            const currentPackages = pricingData[currentPlatformName]?.[category] || [];
+
+            if(currentPackages.length === 0) {
                 let option = document.createElement('option');
-                option.value = index;
-                option.text = item.name;
+                option.text = "Hiện tại chưa có gói cho mục này";
+                option.value = "";
                 selectEl.appendChild(option);
-            });
+            } else {
+                currentPackages.forEach((item, index) => {
+                    let option = document.createElement('option');
+                    option.value = index;
+                    option.text = item.name;
+                    selectEl.appendChild(option);
+                });
+            }
 
             generateRandomMemo();
             calculateTotal();
@@ -389,22 +453,26 @@
             }
 
             // Cấu trúc nội dung: [loại dịch vụ][nền tảng][3 chữ ngẫu nhiên]
-            // Ví dụ: tttvxa (tim tiktok vxa) hoặc tdfbxyz (theo dõi facebook xyz)
             randomMemoCode = `${cateCode}${currentPlatformCode}${randomChars}`.toLowerCase();
             document.getElementById('txtMemo').innerText = randomMemoCode;
         }
 
-        // Hàm tự động tính toán tổng tiền
+        // Hàm tự động tính toán tổng tiền theo công thức: (Số lượng / 1000) * Giá combo
         function calculateTotal() {
             const qty = parseInt(document.getElementById('inputQty').value) || 0;
             const selectEl = document.getElementById('serviceSelect');
             
-            if(selectEl.options.length === 0) return;
+            if(!selectEl.value || selectEl.options.length === 0 || selectEl.value === "") {
+                document.getElementById('txtTotalPrice').innerText = "0 đ";
+                return 0;
+            }
             
             const selectedIndex = selectEl.value;
-            const pricePerUnit = pricingData[currentCategory][selectedIndex].price;
+            // Truy xuất đúng tầng dữ liệu: Nền tảng -> Danh mục -> Gói dịch vụ -> Giá lẻ
+            const pricePer1000 = pricingData[currentPlatformName][currentCategory][selectedIndex].price;
             
-            let total = Math.round(qty * pricePerUnit * 1000); // Quy chuẩn tiền VNĐ
+            // Tính tiền: Lấy số lượng chia cho 1000 rồi nhân với giá của combo 1000
+            let total = Math.round((qty / 1000) * pricePer1000); 
             if (total < 0) total = 0;
 
             // Định dạng hiển thị tiền tệ VNĐ
@@ -412,15 +480,26 @@
             return total;
         }
 
-        // Xử lý đọc file ảnh thành định dạng chuỗi văn bản Base64 để gửi lên Sheet
+        // Xử lý đọc file ảnh thành định dạng chuỗi văn bản Base64 và hiển thị xem trước
         function processFile(input) {
             const file = input.files[0];
+            const preview = document.getElementById('previewBill');
+            
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     base64Image = e.target.result;
+                    
+                    // Gán chuỗi Base64 vào src của thẻ ảnh và hiển thị lên giao diện
+                    preview.src = base64Image;
+                    preview.style.display = "inline-block";
                 };
                 reader.readAsDataURL(file);
+            } else {
+                // Hủy chọn file -> Xóa dữ liệu và ẩn thẻ hiển thị ảnh
+                preview.src = "";
+                preview.style.display = "none";
+                base64Image = "";
             }
         }
 
@@ -429,7 +508,14 @@
             const uid = document.getElementById('inputUid').value.trim();
             const qty = document.getElementById('inputQty').value;
             const contact = document.getElementById('inputContact').value.trim();
-            const serviceName = document.getElementById('serviceSelect').options[document.getElementById('serviceSelect').value].text;
+            const selectEl = document.getElementById('serviceSelect');
+
+            if(!selectEl.value || selectEl.value === "") {
+                Swal.fire("Lỗi", "Dịch vụ này hiện tại không khả dụng!", "error");
+                return;
+            }
+
+            const serviceName = selectEl.options[selectEl.value].text;
             const totalPrice = document.getElementById('txtTotalPrice').innerText;
 
             if(!uid) {
@@ -487,6 +573,8 @@
                     document.getElementById('inputUid').value = "";
                     document.getElementById('inputContact').value = "";
                     document.getElementById('fileBill').value = "";
+                    document.getElementById('previewBill').style.display = "none";
+                    document.getElementById('previewBill').src = "";
                     base64Image = "";
                     generateRandomMemo();
                 });
