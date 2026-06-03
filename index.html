@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Tăng Tương Tác - NT Agency</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* THIẾT LẬP MÀU SẮC CHỦ ĐẠO: TRẮNG, XANH BIỂN, VÀNG */
+        :root {
+            --bg-color: #f4f7f6;
+            --white: #ffffff;
+            --blue-primary: #0056b3;
+            --blue-light: #e6f0fa;
+            --gold: #ffc107;
+            --gold-hover: #e0a800;
+            --text-dark: #333333;
+            --text-muted: #666666;
+            --border-color: #dddddd;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: var(--blue-primary);
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* KHU VỰC CHỌN NỀN TẢNG */
+        .platform-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 25px;
+        }
+
+        .platform-card {
+            background-color: var(--white);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .platform-card:hover, .platform-card.active {
+            border-color: var(--blue-primary);
+            background-color: var(--blue-light);
+            color: var(--blue-primary);
+            transform: translateY(-2px);
+        }
+
+        /* KHU VỰC GIAO DIỆN CON (FORM ORDER) */
+        .order-box {
+            background-color: var(--white);
+            border-radius: 12px;
+            padding: 25px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            display: none; /* Ẩn đi khi chưa chọn nền tảng */
+        }
+
+        .order-box.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--blue-primary);
+            margin-bottom: 15px;
+            border-left: 4px solid var(--gold);
+            padding-left: 10px;
+        }
+
+        /* TAB PHÂN LOẠI */
+        .category-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .category-btn {
+            flex: 1;
+            padding: 10px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .category-btn.active {
+            background-color: var(--blue-primary);
+            color: var(--white);
+            border-color: var(--blue-primary);
+        }
+
+        /* FORM NHẬP LIỆU */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--blue-primary);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* HIỂN THỊ TỔNG TIỀN */
+        .total-price-box {
+            background-color: var(--blue-light);
+            border: 1px dashed var(--blue-primary);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .total-price-box span {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--blue-primary);
+        }
+
+        /* KHU VỰC THANH TOÁN (HƯỚNG DẪN BILL) */
+        .payment-info {
+            background-color: #fffdf3;
+            border: 1px solid var(--gold);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+
+        .payment-info p {
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .payment-info strong {
+            color: #c48b00;
+        }
+
+        .highlight-code {
+            background-color: var(--gold);
+            padding: 2px 6px;
+            font-weight: bold;
+            border-radius: 4px;
+            color: #000;
+        }
+
+        .file-note {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* NÚT TẠO ĐƠN HÀNG */
+        .btn-submit {
+            width: 100%;
+            background-color: var(--gold);
+            color: #000;
+            border: none;
+            padding: 14px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .btn-submit:hover {
+            background-color: var(--gold-hover);
+        }
+
+        .btn-submit:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>NT AGENCY SERVICES</h1>
+        <p>Hệ thống tăng tương tác Mạng Xã Hội nhanh chóng, tự động</p>
+    </header>
+
+    <div class="platform-container">
+        <div class="platform-card" onclick="selectPlatform('Facebook', 'fb')">Facebook</div>
+        <div class="platform-card" onclick="selectPlatform('TikTok', 'tt')">TikTok</div>
+        <div class="platform-card" onclick="selectPlatform('Instagram', 'ig')">Instagram</div>
+        <div class="platform-card" onclick="selectPlatform('Telegram', 'tl')">Telegram</div>
+        <div class="platform-card" onclick="selectPlatform('Threads', 'th')">Threads</div>
+    </div>
+
+    <div class="order-box" id="orderBox">
+        <h3 class="section-title" id="orderTitle">Cấu hình đơn hàng</h3>
+
+        <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:8px;">Chọn phân loại dịch vụ:</label>
+        <div class="category-container">
+            <div class="category-btn active" id="btn-follow" onclick="selectCategory('Follow')">Tăng theo dõi</div>
+            <div class="category-btn" id="btn-like" onclick="selectCategory('Like')">Tăng Tim/Like</div>
+            <div class="category-btn" id="btn-view" onclick="selectCategory('View')">Tăng View</div>
+        </div>
+
+        <div class="form-group">
+            <label for="serviceSelect">Chọn gói dịch vụ cụ thể:</label>
+            <select id="serviceSelect" class="form-control" onchange="calculateTotal()"></select>
+        </div>
+
+        <div class="form-group">
+            <label for="inputUid">Nhập Link hoặc UID tài khoản:</label>
+            <input type="text" id="inputUid" class="form-control" placeholder="https://...">
+        </div>
+
+        <div class="form-group">
+            <label for="inputQty">Số lượng cần tăng:</label>
+            <input type="number" id="inputQty" class="form-control" value="100" min="10" oninput="calculateTotal()">
+        </div>
+
+        <div class="form-group">
+            <label for="inputContact">Số điện thoại Zalo hoặc Link Facebook liên hệ:</label>
+            <input type="text" id="inputContact" class="form-control" placeholder="Nhập thông tin để hỗ trợ khi gặp lỗi">
+        </div>
+
+        <div class="total-price-box">
+            <p>Tổng chi phí thanh toán</p>
+            <span id="txtTotalPrice">0đ</span>
+        </div>
+
+        <div class="payment-info">
+            <p><strong>Ngân hàng:</strong> TP Bank</p>
+            <p><strong>Số Tài Khoản:</strong> 9447 6666 886</p>
+            <p><strong>Chủ Tài Khoản:</strong> Nguyễn Nhật Tiến</p>
+            <p><strong>Nội dung CK bắt buộc:</strong> <span class="highlight-code" id="txtMemo">---</span></p>
+            <p style="color: red; font-weight: bold; margin-top: 10px;">⚠️ Vui lòng chuyển khoản đúng số tiền và chụp màn hình bill thanh toán!</p>
+            
+            <div class="form-group" style="margin-top: 12px;">
+                <label>Tải ảnh hóa đơn (Bill) lên hệ thống:</label>
+                <input type="file" id="fileBill" accept="image/*" class="form-control" onchange="processFile(this)">
+                <p class="file-note">Nhấn nút bên trên để tải hình ảnh hóa đơn vừa chuyển khoản thành công.</p>
+            </div>
+        </div>
+
+        <button class="btn-submit" id="btnSubmit" onclick="submitOrder()">TẠO ĐƠN HÀNG NGAY</button>
+    </div>
+
+    <script>
+        // --- ĐƯỜNG DẪN CẤU HÌNH GOOGLE SHEETS CỦA BẠN ---
+        const SCRIPT_URL = "VUI_LÒNG_DÁN_URL_APP_SCRIPT_CỦA_BẠN_VÀO_ĐÂY";
+
+        // Định nghĩa bảng giá dịch vụ đồng giá mẫu cho cả 5 nền tảng (Giá tính trên mỗi 1 đơn vị lẻ)
+        const pricingData = {
+            Follow: [
+                { name: "Server Theo Dõi 1 (Tốc độ ổn định) - 15đ / 1 follow", price: 0.015 },
+                { name: "Server Theo Dõi 2 (Giá siêu rẻ) - 10đ / 1 follow", price: 0.010 }
+            ],
+            Like: [
+                { name: "Server Tăng Tim 1 (Tương tác thật) - 12đ / 1 tim", price: 0.012 },
+                { name: "Server Tăng Tim 2 (Tốc độ cao) - 8đ / 1 tim", price: 0.008 }
+            ],
+            View: [
+                { name: "Server Tăng View 1 (Xem nhanh) - 2đ / 1 view", price: 0.002 },
+                { name: "Server Tăng View 2 (Xem chậm an toàn) - 1đ / 1 view", price: 0.001 }
+            ]
+        };
+
+        let currentPlatformName = "";
+        let currentPlatformCode = "";
+        let currentCategory = "Follow";
+        let randomMemoCode = "";
+        let base64Image = ""; // Lưu trữ ảnh bill
+
+        // Hàm chọn nền tảng chính
+        function selectPlatform(name, code) {
+            currentPlatformName = name;
+            currentPlatformCode = code;
+            
+            // Đổi active UI các thẻ nền tảng
+            document.querySelectorAll('.platform-card').forEach(card => {
+                card.classList.remove('active');
+                if(card.innerText.trim() === name) card.classList.add('active');
+            });
+
+            // Hiển thị khung điền đơn
+            document.getElementById('orderBox').classList.add('active');
+            document.getElementById('orderTitle').innerText = `Dịch vụ tăng tương tác: ${name}`;
+
+            // Reset danh mục về Follow mặc định khi đổi nền tảng
+            selectCategory('Follow');
+            generateRandomMemo();
+        }
+
+        // Hàm chọn phân loại (Follow, Like, View)
+        function selectCategory(category) {
+            currentCategory = category;
+
+            // Đổi hiệu ứng nút phân loại
+            document.getElementById('btn-follow').classList.remove('active');
+            document.getElementById('btn-like').classList.remove('active');
+            document.getElementById('btn-view').classList.remove('active');
+
+            if(category === 'Follow') document.getElementById('btn-follow').classList.add('active');
+            if(category === 'Like') document.getElementById('btn-like').classList.add('active');
+            if(category === 'View') document.getElementById('btn-view').classList.add('active');
+
+            // Render danh sách gói dịch vụ chi tiết tương ứng
+            const selectEl = document.getElementById('serviceSelect');
+            selectEl.innerHTML = "";
+            
+            pricingData[category].forEach((item, index) => {
+                let option = document.createElement('option');
+                option.value = index;
+                option.text = item.name;
+                selectEl.appendChild(option);
+            });
+
+            generateRandomMemo();
+            calculateTotal();
+        }
+
+        // Hàm sinh nội dung chuyển khoản ngẫu nhiên theo cấu trúc quy định
+        function generateRandomMemo() {
+            if(!currentPlatformCode) return;
+            
+            let cateCode = "t"; // Mặc định tim (theo mong muốn của bạn)
+            if(currentCategory === 'Follow') cateCode = "td"; // theo dõi
+            if(currentCategory === 'View') cateCode = "vw"; // view
+
+            // Tạo ngẫu nhiên 3 ký tự chữ cái viết thường
+            let randomChars = "";
+            const characters = 'abcdefghijklmnopqrstuvwxyz';
+            for (let i = 0; i < 3; i++) {
+                randomChars += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+
+            // Cấu trúc nội dung: [loại dịch vụ][nền tảng][3 chữ ngẫu nhiên]
+            // Ví dụ: tttvxa (tim tiktok vxa) hoặc tdfbxyz (theo dõi facebook xyz)
+            randomMemoCode = `${cateCode}${currentPlatformCode}${randomChars}`.toLowerCase();
+            document.getElementById('txtMemo').innerText = randomMemoCode;
+        }
+
+        // Hàm tự động tính toán tổng tiền
+        function calculateTotal() {
+            const qty = parseInt(document.getElementById('inputQty').value) || 0;
+            const selectEl = document.getElementById('serviceSelect');
+            
+            if(selectEl.options.length === 0) return;
+            
+            const selectedIndex = selectEl.value;
+            const pricePerUnit = pricingData[currentCategory][selectedIndex].price;
+            
+            let total = Math.round(qty * pricePerUnit * 1000); // Quy chuẩn tiền VNĐ
+            if (total < 0) total = 0;
+
+            // Định dạng hiển thị tiền tệ VNĐ
+            document.getElementById('txtTotalPrice').innerText = total.toLocaleString('vi-VN') + " đ";
+            return total;
+        }
+
+        // Xử lý đọc file ảnh thành định dạng chuỗi văn bản Base64 để gửi lên Sheet
+        function processFile(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    base64Image = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Hàm kiểm tra form và đẩy dữ liệu lên Google Sheets
+        function submitOrder() {
+            const uid = document.getElementById('inputUid').value.trim();
+            const qty = document.getElementById('inputQty').value;
+            const contact = document.getElementById('inputContact').value.trim();
+            const serviceName = document.getElementById('serviceSelect').options[document.getElementById('serviceSelect').value].text;
+            const totalPrice = document.getElementById('txtTotalPrice').innerText;
+
+            if(!uid) {
+                Swal.fire("Lỗi", "Vui lòng nhập Link hoặc UID tài khoản cần tăng!", "error");
+                return;
+            }
+            if(!qty || qty <= 0) {
+                Swal.fire("Lỗi", "Số lượng cần tăng không hợp lệ!", "error");
+                return;
+            }
+            if(!contact) {
+                Swal.fire("Lỗi", "Vui lòng nhập Thông tin liên lạc (Zalo/Facebook)!", "error");
+                return;
+            }
+            if(!base64Image) {
+                Swal.fire("Lỗi", "Vui lòng chụp màn hình chuyển khoản và tải ảnh hóa đơn (Bill) lên hệ thống!", "error");
+                return;
+            }
+
+            // Khóa nút tạo đơn để tránh nhấn đúp nhiều lần liên tục
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            btn.innerText = "ĐANG XỬ LÝ ĐƠN HÀNG...";
+
+            // Gom dữ liệu gửi đi
+            const orderData = {
+                platform: currentPlatformName,
+                category: currentCategory,
+                service: serviceName,
+                uid: uid,
+                quantity: qty,
+                contact: contact,
+                totalPrice: totalPrice,
+                code: randomMemoCode,
+                billImage: base64Image
+            };
+
+            // Tiến hành gửi API POST về Google Web App Script
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Sử dụng chế độ an toàn bảo mật không cross-origin
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(() => {
+                Swal.fire({
+                    title: "Thành Công!",
+                    text: "Đơn hàng của bạn đã gửi lên hệ thống và đang chờ NT Agency duyệt bill kích hoạt!",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                }).then(() => {
+                    // Reset trạng thái form sau khi hoàn tất thành công
+                    document.getElementById('inputUid').value = "";
+                    document.getElementById('inputContact').value = "";
+                    document.getElementById('fileBill').value = "";
+                    base64Image = "";
+                    generateRandomMemo();
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire("Lỗi kết nối", "Không thể gửi dữ liệu đến máy chủ, kiểm tra lại cấu hình App Script URL!", "error");
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = "TẠO ĐƠN HÀNG NGAY";
+            });
+        }
+    </script>
+</body>
+</html>
