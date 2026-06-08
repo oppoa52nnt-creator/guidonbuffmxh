@@ -6,7 +6,7 @@
     <title>Hệ Thống Tăng Tương Tác - NT Agency</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* THIẾT LẬP MÀU SẮC CHỦ ĐẠO: TRẮNG, XANH BIỂN, VÀNG */
+        /* THIẾT LẬP MÀU SẮC CHỦ ĐẠO */
         :root {
             --bg-color: #f4f7f6;
             --white: #ffffff;
@@ -15,7 +15,7 @@
             --gold: #ffc107;
             --gold-hover: #e0a800;
             --text-dark: #333333;
-            --text-muted: #666666;
+            --text-muted: #888888;
             --border-color: #dddddd;
         }
 
@@ -88,7 +88,7 @@
             width: 100%;
             max-width: 600px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-            display: none; /* Ẩn đi khi chưa chọn nền tảng */
+            display: none;
         }
 
         .order-box.active {
@@ -106,12 +106,14 @@
         /* TAB PHÂN LOẠI */
         .category-container {
             display: flex;
+            flex-wrap: wrap; 
             gap: 10px;
             margin-bottom: 20px;
         }
 
         .category-btn {
-            flex: 1;
+            flex: 1 1 calc(33.33% - 10px); 
+            min-width: 130px; 
             padding: 10px;
             background-color: var(--bg-color);
             border: 1px solid var(--border-color);
@@ -158,6 +160,15 @@
             cursor: pointer;
         }
 
+        /* Chữ gợi ý số lượng nhỏ, màu lợt */
+        .qty-helper {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
         /* HIỂN THỊ TỔNG TIỀN */
         .total-price-box {
             background-color: var(--blue-light);
@@ -174,7 +185,7 @@
             color: var(--blue-primary);
         }
 
-        /* KHU VỰC THANH TOÁN (HƯỚNG DẪN BILL) */
+        /* KHU VỰC THANH TOÁN */
         .payment-info {
             background-color: #fffdf3;
             border: 1px solid var(--gold);
@@ -251,15 +262,12 @@
         <h3 class="section-title" id="orderTitle">Cấu hình đơn hàng</h3>
 
         <label style="font-weight:600; font-size:0.9rem; display:block; margin-bottom:8px;">Chọn phân loại dịch vụ:</label>
-        <div class="category-container">
-            <div class="category-btn active" id="btn-follow" onclick="selectCategory('Follow')">Tăng theo dõi</div>
-            <div class="category-btn" id="btn-like" onclick="selectCategory('Like')">Tăng Tim/Cảm Xúc</div>
-            <div class="category-btn" id="btn-view" onclick="selectCategory('View')">Tăng View</div>
-        </div>
+        
+        <div class="category-container" id="categoryContainer"></div>
 
         <div class="form-group">
             <label for="serviceSelect">Chọn gói dịch vụ cụ thể:</label>
-            <select id="serviceSelect" class="form-control" onchange="calculateTotal()"></select>
+            <select id="serviceSelect" class="form-control" onchange="onServiceChange()"></select>
         </div>
 
         <div class="form-group">
@@ -269,7 +277,8 @@
 
         <div class="form-group">
             <label for="inputQty">Số lượng cần tăng:</label>
-            <input type="number" id="inputQty" class="form-control" value="100" min="10" oninput="calculateTotal()">
+            <input type="number" id="inputQty" class="form-control" placeholder="Nhập số lượng cần tăng..." oninput="calculateTotal()">
+            <span class="qty-helper" id="qtyHelper">Min: 50 - Max: 1.000.000</span>
         </div>
 
         <div class="form-group">
@@ -303,121 +312,136 @@
     </div>
 
     <script>
-        // --- ĐƯỜNG DẪN CẤU HÌNH GOOGLE SHEETS CỦA BẠN ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwVlAyh35pYyarZWUS1zihC4-nD18vhgQ-iW24RTcWm_c7A7E9jDWDYelkgxJnk0BE/exec";
 
-        // BẢNG GIÁ ĐA TẦNG: Đã phân tách chi tiết theo từng Nền tảng -> từng Danh mục (Giá tính theo mốc 1000 đơn vị)
+        const categoryNames = {
+            Follow: "Tăng theo dõi",
+            Like: "Tăng Tim/Cảm Xúc",
+            View: "Tăng View",
+            Share: "Tăng Chia Sẻ",
+            Comment: "Tăng Bình Luận",
+            Fvr: "Tăng Yêu Thích",
+            1: "Tăng Tương Tác Bình Luận",
+            2: "Tăng Lượt Đăng lại",
+            3: "Tăng Mắt Livestream",
+            4: "Tăng Điểm PK",
+            5: "Tăng Thành Viên",
+        };
+
+        // BẢNG GIÁ - TỪNG GÓI CÓ MIN/MAX RIÊNG BIỆT ĐỂ EM TỰ CHỈNH SỬA
         const pricingData = {
             Facebook: {
                 Follow: [
-                    { name: "Theo Dõi Ẩn - 10.000đ", price: 15000 },
-                    { name: "theo Dõi Ẩn Lên Nhanh - 15.000đ", price: 15000 }
+                    { name: "Theo Dõi Ẩn - 6.000đ", price: 6000, min: 50, max: 1000000 },
+                    { name: "Theo Dõi Ẩn Lên Nhanh - 10.000đ", price: 10000, min: 50, max: 1000000 }
                 ],
                 Like: [
-                    { name: "Tim bài viết VN - 12.000đ / 1000 like", price: 12000 },
-                    { name: "Like bài viết VN - 12.000đ / 1000 like", price: 12000 },
-                    { name: "Haha bài viết VN - 12.000đ / 1000 like", price: 12000 },
-                    { name: "Tức Giận bài viết VN - 12.000đ / 1000 like", price: 12000 },
-                    { name: "Wow bài viết VN - 12.000đ / 1000 like", price: 12000 },
-                    { name: "Sad🥲 bài viết VN - 12.000đ / 1000 like", price: 12000 },
-                    { name: "care🥰 bài viết VN - 12.000đ / 1000 like", price: 12000 },
+                    { name: "Tim bài viết VN - 12.000đ", price: 12000, min: 20, max: 10000 },
+                    { name: "Like bài viết VN - 12.000đ", price: 12000, min: 20, max: 10000 },
+                    { name: "Haha bài viết VN - 12.000đ", price: 12000, min: 20, max: 10000 },
+                    { name: "Tức Giận bài viết VN - 12.000đ", price: 12000, min: 20, max: 10000 },
+                    { name: "Wow bài viết VN - 12.000đ", price: 12000, min: 20, max: 10000 }
                 ],
                 View: [
-                    { name: "FB View Video / Reel - 3.000đ / 1000 view", price: 3000 }
+                    { name: " | Video/Reels | Siêu Tốc - 3.000đ", price: 3000, min: 50, max: 50000000 }
+                ],
+                Comment: [
+                    { name: "Tự Soạn | Việt Nam - 25.000đ", price: 25000, min: 50, max: 1000000 },
+                    { name: "| Ngẫu Nhiên | Dạng Ẩn | - 5.000đ", price: 5000, min: 50, max: 10000 }
+                ],
+                Share: [
+                    { name: "Facebook Shares | Post/Photo | - 1.000đ", price: 15000, min: 50, max: 1000000 },
+                    { name: "Facebook Shares | Post/Video/Live | - 7.000đ", price: 15000, min: 50, max: 1000000 }
+                ],
+                5: [
+                    { name: "Members | VN | - 5.000đ", price: 15000, min: 50, max: 1000000 }
                 ]
             },
             TikTok: {
                 Follow: [
-                    { name: "TT Follow Việt (Bảo hành 30 ngày) - 25.000đ / 1000 follow", price: 25000 },
-                    { name: "TT Follow Quốc Tế (Giá rẻ) - 15.000đ / 1000 follow", price: 15000 }
+                    { name: "Follows VN lên chậm - 12.000đ", price: 12000, min: 50, max: 1000000 },
+                    { name: "Follows Tây Siêu Tốc🚀⚡ - 42.000đ", price: 15000, min: 50, max: 1000000 }
                 ],
                 Like: [
-                    { name: "TT Like/Tim Video (Nhanh) - 14.000đ / 1000 tim", price: 14000 }
+                    { name: "TT Like/Tim Video (Nhanh) - 14.000đ", price: 14000, min: 50, max: 1000000 }
                 ],
                 View: [
-                    { name: "TT View Video (Siêu tốc) - 1.000đ / 1000 view", price: 1000 }
+                    { name: "View Siêu Rẻ  - 200đ", price: 200, min: 100000, max: 2000000000 },
+                    { name: "View Unlimited | 10M/Ngày - 850đ ", price: 850, min: 100, max: 2000000000 },
+                    { name: "Tiktok View | 100% Không Tụt | - 4.000đ ", price: 4000, min: 3000, max: 50000 }
+                ],
+                Comment: [
+                    { name: "TT Bình Luận Video - 20.000đ", price: 20000, min: 50, max: 1000000 }
+                ],
+                Share: [
+                    { name: "TikTok Shares 500K/Ngày - 5.000đ", price: 5000, min: 50, max: 1000000 }
                 ]
             },
             Instagram: {
-                Follow: [
-                    { name: "IG Follow Ngoại (Chất lượng) - 20.000đ / 1000 follow", price: 20000 }
-                ],
-                Like: [
-                    { name: "IG Like Hình Ảnh - 10.000đ / 1000 like", price: 10000 }
-                ],
-                View: [
-                    { name: "IG View Reels - 2.000đ / 1000 view", price: 2000 }
-                ]
+                Follow: [{ name: "IG Follow Ngoại (Chất lượng) - 20.000đ", price: 20000, min: 50, max: 1000000 }],
+                Like: [{ name: "IG Like Hình Ảnh - 10.000đ", price: 10000, min: 50, max: 1000000 }],
+                View: [{ name: "IG View Reels - 2.000đ", price: 2000, min: 50, max: 1000000 }]
             },
             Telegram: {
-                Follow: [
-                    { name: "TL Member Channel / Group - 30.000đ / 1000 mem", price: 30000 }
-                ],
-                Like: [
-                    { name: "TL Reaction Bài Viết - 5.000đ / 1000 slot", price: 5000 }
-                ],
-                View: [
-                    { name: "TL View Post (Bản tin) - 1.500đ / 1000 view", price: 1500 }
-                ]
+                Follow: [{ name: "TL Member Channel / Group - 30.000đ", price: 30000, min: 50, max: 1000000 }],
+                Like: [{ name: "TL Reaction Bài Viết - 5.000đ", price: 5000, min: 50, max: 1000000 }],
+                View: [{ name: "TL View Post (Bản tin) - 1.500đ", price: 1500, min: 50, max: 1000000 }]
             },
             Threads: {
-                Follow: [
-                    { name: "TH Followers (Acc sạch) - 35.000đ / 1000 follow", price: 35000 }
-                ],
-                Like: [
-                    { name: "TH Likes Bài Đăng - 15.000đ / 1000 like", price: 15000 }
-                ],
-                View: [
-                    { name: "TH View Khởi Tạo - 4.000đ / 1000 view", price: 4000 }
-                ]
+                Follow: [{ name: "TH Followers (Acc sạch) - 35.000đ", price: 35000, min: 50, max: 1000000 }],
+                Like: [{ name: "TH Likes Bài Đăng - 15.000đ", price: 15000, min: 50, max: 1000000 }],
+                View: [{ name: "TH View Khởi Tạo - 4.000đ", price: 4000, min: 50, max: 1000000 }]
             }
         };
-
         let currentPlatformName = "";
         let currentPlatformCode = "";
-        let currentCategory = "Follow";
+        let currentCategory = "";
         let randomMemoCode = "";
-        let base64Image = ""; // Lưu trữ ảnh bill
+        let base64Image = ""; 
 
-        // Hàm chọn nền tảng chính
         function selectPlatform(name, code) {
             currentPlatformName = name;
             currentPlatformCode = code;
             
-            // Đổi active UI các thẻ nền tảng
             document.querySelectorAll('.platform-card').forEach(card => {
                 card.classList.remove('active');
                 if(card.innerText.trim() === name) card.classList.add('active');
             });
 
-            // Hiển thị khung điền đơn
             document.getElementById('orderBox').classList.add('active');
             document.getElementById('orderTitle').innerText = `Dịch vụ tăng tương tác: ${name}`;
 
-            // Reset danh mục về Follow mặc định khi đổi nền tảng
-            selectCategory('Follow');
-            generateRandomMemo();
+            const platformCategories = Object.keys(pricingData[name] || {});
+            const catContainer = document.getElementById('categoryContainer');
+            catContainer.innerHTML = ""; 
+
+            if (platformCategories.length > 0) {
+                platformCategories.forEach((catKey, index) => {
+                    const btn = document.createElement('div');
+                    btn.className = `category-btn ${index === 0 ? 'active' : ''}`;
+                    btn.innerText = categoryNames[catKey] || catKey; 
+                    btn.onclick = function() {
+                        selectCategory(catKey, this);
+                    };
+                    catContainer.appendChild(btn);
+                });
+
+                selectCategory(platformCategories[0], catContainer.firstChild);
+            }
         }
 
-        // Hàm chọn phân loại (Follow, Like, View)
-        function selectCategory(category) {
-            currentCategory = category;
+        function selectCategory(categoryKey, clickedElement) {
+            currentCategory = categoryKey;
 
-            // Đổi hiệu ứng nút phân loại
-            document.getElementById('btn-follow').classList.remove('active');
-            document.getElementById('btn-like').classList.remove('active');
-            document.getElementById('btn-view').classList.remove('active');
+            if (clickedElement) {
+                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                clickedElement.classList.add('active');
+            }
 
-            if(category === 'Follow') document.getElementById('btn-follow').classList.add('active');
-            if(category === 'Like') document.getElementById('btn-like').classList.add('active');
-            if(category === 'View') document.getElementById('btn-view').classList.add('active');
-
-            // Render danh sách gói dịch vụ chi tiết tương ứng theo Nền tảng và Phân loại
             const selectEl = document.getElementById('serviceSelect');
             selectEl.innerHTML = "";
             
-            // Lấy danh sách gói cụ thể dựa trên nền tảng hiện tại và danh mục
-            const currentPackages = pricingData[currentPlatformName]?.[category] || [];
+            const currentPackages = pricingData[currentPlatformName]?.[categoryKey] || [];
 
             if(currentPackages.length === 0) {
                 let option = document.createElement('option');
@@ -434,30 +458,56 @@
             }
 
             generateRandomMemo();
+            onServiceChange(); // Gọi hàm cập nhật min/max lợt và tính lại tiền
+        }
+
+        // HÀM CHẠY KHI ĐỔI GÓI DỊCH VỤ CỤ THỂ
+        function onServiceChange() {
+            updateMinMaxLimits();
             calculateTotal();
         }
 
-        // Hàm sinh nội dung chuyển khoản ngẫu nhiên theo cấu trúc quy định
+        // ĐỌC MIN/MAX RIÊNG CỦA TỪNG GÓI ĐỂ HIỂN THỊ CHỮ GỢI Ý
+        function updateMinMaxLimits() {
+            const selectEl = document.getElementById('serviceSelect');
+            const qtyInput = document.getElementById('inputQty');
+            const qtyHelper = document.getElementById('qtyHelper');
+            
+            if(!selectEl.value || selectEl.value === "") return;
+            
+            const selectedIndex = selectEl.value;
+            const currentPackage = pricingData[currentPlatformName][currentCategory][selectedIndex];
+            
+            // Lấy min, max trực tiếp từ cấu hình riêng của gói đó
+            const minQty = currentPackage.min !== undefined ? currentPackage.min : 50;
+            const maxQty = currentPackage.max !== undefined ? currentPackage.max : 1000000;
+            
+            qtyInput.min = minQty;
+            qtyInput.max = maxQty;
+            
+            // Thay đổi dòng chữ nhỏ màu lợt dưới ô nhập
+            qtyHelper.innerText = `Min: ${minQty.toLocaleString('vi-VN')} - Max: ${maxQty.toLocaleString('vi-VN')}`;
+        }
+
         function generateRandomMemo() {
             if(!currentPlatformCode) return;
             
-            let cateCode = "t"; // Mặc định tim (theo mong muốn của bạn)
-            if(currentCategory === 'Follow') cateCode = "td"; // theo dõi
-            if(currentCategory === 'View') cateCode = "vw"; // view
+            let cateCode = "t"; 
+            if(currentCategory === 'Follow') cateCode = "td";
+            if(currentCategory === 'View') cateCode = "vw";
+            if(currentCategory === 'Share') cateCode = "sh";
+            if(currentCategory === 'Comment') cateCode = "cm";
 
-            // Tạo ngẫu nhiên 3 ký tự chữ cái viết thường
             let randomChars = "";
             const characters = 'abcdefghijklmnopqrstuvwxyz';
             for (let i = 0; i < 3; i++) {
                 randomChars += characters.charAt(Math.floor(Math.random() * characters.length));
             }
 
-            // Cấu trúc nội dung: [loại dịch vụ][nền tảng][3 chữ ngẫu nhiên]
             randomMemoCode = `${cateCode}${currentPlatformCode}${randomChars}`.toLowerCase();
             document.getElementById('txtMemo').innerText = randomMemoCode;
         }
 
-        // Hàm tự động tính toán tổng tiền theo công thức: (Số lượng / 1000) * Giá combo
         function calculateTotal() {
             const qty = parseInt(document.getElementById('inputQty').value) || 0;
             const selectEl = document.getElementById('serviceSelect');
@@ -468,19 +518,15 @@
             }
             
             const selectedIndex = selectEl.value;
-            // Truy xuất đúng tầng dữ liệu: Nền tảng -> Danh mục -> Gói dịch vụ -> Giá lẻ
             const pricePer1000 = pricingData[currentPlatformName][currentCategory][selectedIndex].price;
             
-            // Tính tiền: Lấy số lượng chia cho 1000 rồi nhân với giá của combo 1000
             let total = Math.round((qty / 1000) * pricePer1000); 
             if (total < 0) total = 0;
 
-            // Định dạng hiển thị tiền tệ VNĐ
             document.getElementById('txtTotalPrice').innerText = total.toLocaleString('vi-VN') + " đ";
             return total;
         }
 
-        // Xử lý đọc file ảnh thành định dạng chuỗi văn bản Base64 và hiển thị xem trước
         function processFile(input) {
             const file = input.files[0];
             const preview = document.getElementById('previewBill');
@@ -489,29 +535,46 @@
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     base64Image = e.target.result;
-                    
-                    // Gán chuỗi Base64 vào src của thẻ ảnh và hiển thị lên giao diện
                     preview.src = base64Image;
                     preview.style.display = "inline-block";
                 };
                 reader.readAsDataURL(file);
             } else {
-                // Hủy chọn file -> Xóa dữ liệu và ẩn thẻ hiển thị ảnh
                 preview.src = "";
                 preview.style.display = "none";
                 base64Image = "";
             }
         }
 
-        // Hàm kiểm tra form và đẩy dữ liệu lên Google Sheets
         function submitOrder() {
             const uid = document.getElementById('inputUid').value.trim();
-            const qty = document.getElementById('inputQty').value;
+            const qtyStr = document.getElementById('inputQty').value;
+            const qty = parseInt(qtyStr) || 0;
             const contact = document.getElementById('inputContact').value.trim();
             const selectEl = document.getElementById('serviceSelect');
 
             if(!selectEl.value || selectEl.value === "") {
                 Swal.fire("Lỗi", "Dịch vụ này hiện tại không khả dụng!", "error");
+                return;
+            }
+            
+            if(qtyStr === "") {
+                Swal.fire("Lỗi", "Vui lòng nhập số lượng cần tăng!", "error");
+                return;
+            }
+
+            // CHECK MIN/MAX THEO TỪNG GÓI RIÊNG BIỆT KHI KHÁCH ẤN TẠO ĐƠN
+            const selectedIndex = selectEl.value;
+            const currentPackage = pricingData[currentPlatformName][currentCategory][selectedIndex];
+            const minLimit = currentPackage.min !== undefined ? currentPackage.min : 50;
+            const maxLimit = currentPackage.max !== undefined ? currentPackage.max : 1000000;
+
+            if(qty < minLimit) {
+                Swal.fire("Lỗi số lượng", `Số lượng tối thiểu cho gói này là ${minLimit.toLocaleString()}!`, "error");
+                return;
+            }
+            if(qty > maxLimit) {
+                Swal.fire("Lỗi số lượng", `Số lượng tối đa cho gói này là ${maxLimit.toLocaleString()}!`, "error");
                 return;
             }
 
@@ -520,10 +583,6 @@
 
             if(!uid) {
                 Swal.fire("Lỗi", "Vui lòng nhập Link hoặc UID tài khoản cần tăng!", "error");
-                return;
-            }
-            if(!qty || qty <= 0) {
-                Swal.fire("Lỗi", "Số lượng cần tăng không hợp lệ!", "error");
                 return;
             }
             if(!contact) {
@@ -535,12 +594,10 @@
                 return;
             }
 
-            // Khóa nút tạo đơn để tránh nhấn đúp nhiều lần liên tục
             const btn = document.getElementById('btnSubmit');
             btn.disabled = true;
             btn.innerText = "ĐANG XỬ LÝ ĐƠN HÀNG...";
 
-            // Gom dữ liệu gửi đi
             const orderData = {
                 platform: currentPlatformName,
                 category: currentCategory,
@@ -553,10 +610,9 @@
                 billImage: base64Image
             };
 
-            // Tiến hành gửi API POST về Google Web App Script
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Sử dụng chế độ an toàn bảo mật không cross-origin
+                mode: 'no-cors',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -569,12 +625,13 @@
                     icon: "success",
                     confirmButtonText: "OK"
                 }).then(() => {
-                    // Reset trạng thái form sau khi hoàn tất thành công
                     document.getElementById('inputUid').value = "";
+                    document.getElementById('inputQty').value = "";
                     document.getElementById('inputContact').value = "";
                     document.getElementById('fileBill').value = "";
                     document.getElementById('previewBill').style.display = "none";
                     document.getElementById('previewBill').src = "";
+                    document.getElementById('txtTotalPrice').innerText = "0 đ";
                     base64Image = "";
                     generateRandomMemo();
                 });
